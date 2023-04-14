@@ -12,14 +12,21 @@ import {
   Text,
   Center,
   useToast,
+  Flex,
+  Spacer,
 } from "@chakra-ui/react";
 import { firestore, doc, getDoc, setDoc } from "../../lib/firebase";
 import { useAccount } from "wagmi";
+import NextLink from "next/link";
+import paymentToken from "../../config/paymentToken.json";
 
 export default function Setting() {
   const toast = useToast();
   const { address, isConnected } = useAccount();
 
+  const [name, setName] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [pfp, setPfp] = useState<string>("");
   const [subscriptionPrice, setSubscriptionPrice] = useState<number>(0);
   const [membershipNFTAddress, setMembershipNFTAddress] = useState<string>("");
   useEffect(() => {
@@ -28,7 +35,7 @@ export default function Setting() {
     }
 
     const initialize = async () => {
-      const docRef = doc(firestore, "creator", address);
+      const docRef = doc(firestore, "creator", address.toLowerCase());
 
       try {
         const doc = await getDoc(docRef);
@@ -41,6 +48,9 @@ export default function Setting() {
           alert("data fetch error");
           return;
         }
+        setName(data.name);
+        setDescription(data.description);
+        setPfp(data.pfp);
         setSubscriptionPrice(data.price);
         setMembershipNFTAddress(data.contractAddress);
       } catch (e) {
@@ -52,10 +62,17 @@ export default function Setting() {
 
   const update = async () => {
     if (!address) return;
-    await setDoc(doc(firestore, "creator", address), {
-      price: subscriptionPrice,
-      contractAddress: membershipNFTAddress,
-    });
+    await setDoc(
+      doc(firestore, "creator", address.toLowerCase()),
+      {
+        name,
+        description,
+        pfp,
+        price: subscriptionPrice,
+        contractAddress: membershipNFTAddress,
+      },
+      { merge: true }
+    );
 
     toast({
       title: "Setting Updated.",
@@ -70,7 +87,7 @@ export default function Setting() {
     <>
       <Box px={40} pt={10}>
         <Heading w="100%" textAlign={"center"} fontWeight="normal" mb="2%">
-          Subscription Setting
+          Creator Setting
         </Heading>
 
         {!isConnected && (
@@ -92,20 +109,70 @@ export default function Setting() {
         )}
         {isConnected && (
           <Box suppressHydrationWarning={true}>
-            <Box pt={8} w="100%">
-              <VStack>
-                <Heading
-                  w="100%"
-                  textAlign={"center"}
-                  fontWeight="normal"
-                  mb="2%"
-                  size="md"
+            <Box pt={4} px={60}>
+              <Flex justifyContent={"justify-end"}>
+                <Box /> <Spacer />
+                <NextLink
+                  href={`/creator/profile/${address?.toLowerCase()}`}
+                  style={{ textDecoration: "none" }}
                 >
+                  <Button colorScheme="orange" variant="outline">
+                    My Profile Page
+                  </Button>
+                </NextLink>
+              </Flex>
+              <VStack pb={8}>
+                <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
+                  Profile
+                </Heading>
+
+                <FormControl mt="2%" py={2}>
+                  <FormLabel fontWeight={"normal"}>Name</FormLabel>
+                  <Input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </FormControl>
+
+                <FormControl mt="2%" py={2}>
+                  <FormLabel fontWeight={"normal"}>Description</FormLabel>
+                  <Input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </FormControl>
+
+                <FormControl mt="2%" py={2}>
+                  <FormLabel fontWeight={"normal"}>
+                    Profile Picture(URL)
+                  </FormLabel>
+
+                  <Input
+                    type="text"
+                    value={pfp}
+                    onChange={(e) => setPfp(e.target.value)}
+                  />
+                  {pfp && (
+                    <Box pt={4}>
+                      <img
+                        width={250}
+                        height={250}
+                        src={pfp}
+                        alt="profile picture"
+                      />
+                    </Box>
+                  )}
+                </FormControl>
+              </VStack>
+              <VStack>
+                <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
                   Subscription Fee
                 </Heading>
                 <FormControl mt="2%">
                   <FormLabel fontWeight={"normal"}>
-                    Monthly Payment (Paid in USDCx)
+                    Monthly Payment (Paid in {paymentToken.symbol})
                   </FormLabel>
                   <HStack>
                     <Input
@@ -117,19 +184,13 @@ export default function Setting() {
                         setSubscriptionPrice(Number(e.target.value))
                       }
                     />
-                    <Text pl={4}>USDCx</Text>
+                    <Text pl={4}>{paymentToken.symbol}</Text>
                   </HStack>
                 </FormControl>
               </VStack>
               <Box py={4} />
               <VStack>
-                <Heading
-                  w="100%"
-                  textAlign={"center"}
-                  fontWeight="normal"
-                  mb="2%"
-                  size="md"
-                >
+                <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
                   Membership NFT
                 </Heading>
                 <FormControl mt="2%">

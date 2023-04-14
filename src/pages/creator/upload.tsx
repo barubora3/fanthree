@@ -1,6 +1,15 @@
 import { useCreateAsset } from "@livepeer/react";
 import { useMemo, useState, useEffect } from "react";
-import { firestore, doc, getDoc, setDoc } from "../../lib/firebase";
+import {
+  firestore,
+  doc,
+  getDoc,
+  setDoc,
+  addDoc,
+  collection,
+  updateDoc,
+  FieldValue,
+} from "../../lib/firebase";
 import {
   Box,
   Text,
@@ -34,7 +43,6 @@ export default function Home() {
 
   const [title, setTitle] = useState<string>();
   const [description, setDescription] = useState<string>();
-  const [tags, setTags] = useState<string>();
   const [onlySubscriber, setOnlySubscriber] = useState<boolean>(true);
 
   const isReady = title && description && video ? true : false;
@@ -87,6 +95,11 @@ export default function Home() {
     }
   }, [progress?.[0].phase]);
 
+  // const test = async () => {
+
+  //   FieldValue.arrayUnion({ a: 1, b: 2 }})
+
+  // };
   const regist = async () => {
     if (!asset) return;
     const id = asset?.[0].id;
@@ -104,14 +117,24 @@ export default function Home() {
       });
       return;
     }
-    await setDoc(doc(firestore, "contents", address), {
+
+    // not scalable
+    const docRef = doc(firestore, "creator", address.toLowerCase());
+    const docSnap = await getDoc(docRef);
+    let contentsList = docSnap.data()?.contents;
+    if (contentsList == undefined) {
+      contentsList = [];
+    }
+    contentsList.push({
       title,
       description,
+      onlySubscriber,
       id,
       name,
       createdAt,
       playbackUrl,
     });
+    await updateDoc(docRef, { contens: contentsList });
 
     toast({
       title: "Upload Compleated.",
@@ -125,18 +148,21 @@ export default function Home() {
 
   return (
     <>
-      <Box px={40} pt={10}>
+      <Box px={{ lg: 40 }} pt={10}>
         <Heading w="100%" textAlign={"center"} fontWeight="normal" mb="2%">
           Upload Video
         </Heading>
-        <Box pt={8} px={60}>
-          {video && (
-            <Center pb={8}>
-              <video width="400" src={videoUrl} autoPlay loop></video>
-            </Center>
-          )}
+        <Box pt={4} px={60}>
           <Box>
-            <Input type="file" accept="video/mp4" onChange={onChangeFile} />
+            <FormControl mt="2%" py={2}>
+              <FormLabel fontWeight={"normal"}>Movie</FormLabel>
+              {video && (
+                <Center pb={8}>
+                  <video width="400" src={videoUrl} autoPlay loop></video>
+                </Center>
+              )}
+              <Input type="file" accept="video/mp4" onChange={onChangeFile} />
+            </FormControl>
           </Box>
           <Box>
             <FormControl mt="2%" py={2}>
@@ -173,7 +199,7 @@ export default function Home() {
           </Box>
 
           {/* {progressFormatted && <p>{progressFormatted}</p>} */}
-          <Center>
+          <Center pt={4}>
             <Button
               colorScheme="orange"
               onClick={() => {
