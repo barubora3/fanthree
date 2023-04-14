@@ -40,19 +40,15 @@ export default function Setting() {
       try {
         const doc = await getDoc(docRef);
 
-        if (doc.exists()) {
-        }
         console.log("Cached document data:", doc.data());
         const data = doc.data();
-        if (!data) {
-          alert("data fetch error");
-          return;
+        if (data) {
+          setName(data.name);
+          setDescription(data.description);
+          setPfp(data.pfp);
+          setSubscriptionPrice(data.price);
+          setMembershipNFTAddress(data.contractAddress);
         }
-        setName(data.name);
-        setDescription(data.description);
-        setPfp(data.pfp);
-        setSubscriptionPrice(data.price);
-        setMembershipNFTAddress(data.contractAddress);
       } catch (e) {
         console.log("Error getting cached document:", e);
       }

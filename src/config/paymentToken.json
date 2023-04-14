@@ -1,4 +1,4 @@
 {
-  "symbol": "fUSDCx",
-  "conractAddress": "0x0c7d5ae016f806603cb1782bea29ac69471cab9c"
+  "chainId": 80001,
+  "symbol": "fDAIx"
 }
