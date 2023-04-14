@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import "@rainbow-me/rainbowkit/styles.css";
 import { Header } from "../components/header";
+import SidebarWithHeader from "../components/sidebar";
 import { getDefaultWallets, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { configureChains, createClient, WagmiConfig } from "wagmi";
 import { polygonMumbai } from "wagmi/chains";
@@ -49,8 +50,10 @@ export default function App({ Component, pageProps }: AppProps) {
       <RainbowKitProvider chains={chains}>
         <LivepeerConfig client={livepeerClient}>
           <ChakraProvider>
-            <Header></Header>
-            <Component {...pageProps} />
+            {/* <Header></Header> */}
+            <SidebarWithHeader {...pageProps}>
+              <Component {...pageProps} />
+            </SidebarWithHeader>
           </ChakraProvider>
         </LivepeerConfig>
       </RainbowKitProvider>
