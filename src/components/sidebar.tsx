@@ -36,6 +36,7 @@ import {
   FiChevronDown,
 } from "react-icons/fi";
 import { MdAppRegistration } from "react-icons/md";
+import { RiVideoUploadLine } from "react-icons/ri";
 import { IconType } from "react-icons";
 import { ReactText } from "react";
 
@@ -48,8 +49,8 @@ const LinkItems: Array<LinkItemProps> = [
   { name: "Home", icon: FiHome, path: "creator/setting" },
   { name: "Trending", icon: FiTrendingUp, path: "creator/setting" },
   { name: "Explore", icon: FiCompass, path: "creator/setting" },
-  { name: "Favourites", icon: FiStar, path: "creator/setting" },
-  { name: "Setting", icon: MdAppRegistration, path: "creator/setting" },
+  { name: "Upload", icon: RiVideoUploadLine, path: "/creator/upload" },
+  { name: "Setting", icon: MdAppRegistration, path: "/creator/setting" },
 ];
 
 export default function SidebarWithHeader({
