@@ -8,6 +8,7 @@ import {
   updateDoc,
   setDoc,
   FieldValue,
+  getDocs,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -31,5 +32,6 @@ export {
   getDoc,
   updateDoc,
   setDoc,
+  getDocs,
   FieldValue,
 };

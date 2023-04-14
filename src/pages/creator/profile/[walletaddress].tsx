@@ -61,7 +61,6 @@ export default function Setting() {
         "contents",
         walletaddress.toLowerCase()
       );
-
       try {
         // get profile
         const creatorDoc = await getDoc(creatorRef);
@@ -81,13 +80,13 @@ export default function Setting() {
         const contentsDoc = await getDoc(contentsRef);
 
         const contents = contentsDoc.data();
-        console.log(contents);
+        // console.log(contents);
       } catch (e) {
         console.log("Error getting cached document:", e);
       }
     };
     initialize();
-  }, []);
+  }, [walletaddress]);
 
   const update = async () => {
     if (!address) return;

@@ -3,9 +3,18 @@ import type { AppProps } from "next/app";
 import "@rainbow-me/rainbowkit/styles.css";
 import { Header } from "../components/header";
 import SidebarWithHeader from "../components/sidebar";
-import { getDefaultWallets, RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import {
+  getDefaultWallets,
+  RainbowKitProvider,
+  connectorsForWallets,
+} from "@rainbow-me/rainbowkit";
+import {
+  injectedWallet,
+  rainbowWallet,
+  walletConnectWallet,
+} from "@rainbow-me/rainbowkit/wallets";
 import { configureChains, createClient, WagmiConfig } from "wagmi";
-import { polygonMumbai } from "wagmi/chains";
+import { polygonMumbai, goerli } from "wagmi/chains";
 import { alchemyProvider } from "wagmi/providers/alchemy";
 import { publicProvider } from "wagmi/providers/public";
 
@@ -25,18 +34,29 @@ const livepeerClient = createReactClient({
 });
 
 const { chains, provider } = configureChains(
-  [polygonMumbai],
+  [polygonMumbai, goerli],
   [
     alchemyProvider({ apiKey: process.env.NEXT_PUBLIC_ALCHEMY_ID || "" }),
     publicProvider(),
   ]
 );
 
-const { connectors } = getDefaultWallets({
-  appName: "My RainbowKit App",
-  projectId: process.env.NEXT_PUBLIC_ALCHEMY_ID || "",
-  chains,
-});
+// const { connectors } = getDefaultWallets({
+//   appName: "My RainbowKit App",
+//   projectId: process.env.NEXT_PUBLIC_ALCHEMY_ID || "",
+//   chains,
+// });
+
+const connectors = connectorsForWallets([
+  {
+    groupName: "Recommended",
+    wallets: [
+      injectedWallet({ chains }),
+      // rainbowWallet({ projectId, chains }),
+      // walletConnectWallet({ projectId, chains }),
+    ],
+  },
+]);
 
 const wagmiClient = createClient({
   autoConnect: true,

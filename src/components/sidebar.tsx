@@ -46,9 +46,9 @@ interface LinkItemProps {
   path: string;
 }
 const LinkItems: Array<LinkItemProps> = [
-  { name: "Home", icon: FiHome, path: "creator/setting" },
-  { name: "Trending", icon: FiTrendingUp, path: "creator/setting" },
-  { name: "Explore", icon: FiCompass, path: "creator/setting" },
+  { name: "Home", icon: FiHome, path: "/" },
+  // { name: "Trending", icon: FiTrendingUp, path: "creator/setting" },
+  { name: "Explore", icon: FiCompass, path: "/explore" },
   { name: "Upload", icon: RiVideoUploadLine, path: "/creator/upload" },
   { name: "Setting", icon: MdAppRegistration, path: "/creator/setting" },
 ];
