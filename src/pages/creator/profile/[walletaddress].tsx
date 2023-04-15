@@ -32,6 +32,7 @@ import { Framework } from "@superfluid-finance/sdk-core";
 import { useProvider, useSwitchNetwork, useSigner, useNetwork } from "wagmi";
 import { ethers } from "ethers";
 import { useMutation } from "@tanstack/react-query";
+import calculateFlowRate from "../../../lib/calculateFlowRate";
 import { ENV } from "@pushprotocol/uiweb";
 import {
   CreateSignedPlaybackBody,
@@ -107,29 +108,13 @@ export default function Setting() {
     initialize();
   }, [walletaddress]);
 
-  function calculateFlowRate(amountInEther: number) {
-    let calculatedFlowRate = "";
-    if (
-      typeof Number(amountInEther) !== "number" ||
-      isNaN(Number(amountInEther)) === true
-    ) {
-      console.log(typeof Number(amountInEther));
-      alert("You can only calculate a flowRate based on a number");
-    } else if (typeof Number(amountInEther) === "number") {
-      const monthlyAmount = Number(
-        ethers.utils.parseEther(amountInEther.toString())
-      );
-      calculatedFlowRate = String(Math.floor(monthlyAmount / 3600 / 24 / 30));
-    }
-    return calculatedFlowRate;
-  }
-
   const checkSubscription = async (monthlyPrice: number) => {
     if (chain?.id != paymentToken.chainId) {
       alert("Please switch to Mumbai.");
       return;
     }
 
+    console.log("check start");
     const provider = new ethers.providers.Web3Provider(
       (window as any).ethereum
     );
@@ -153,8 +138,33 @@ export default function Setting() {
 
     if (res.flowRate >= calculateFlowRate(monthlyPrice)) {
       setIsSubscribed(true);
+      return;
     } else {
       setIsSubscribed(false);
+    }
+
+    // check own nff(sft)
+    if (!membershipNFTAddress) {
+      return;
+    }
+
+    const options = { method: "GET", headers: { accept: "application/json" } };
+
+    const response = await fetch(
+      "https://polygon-mumbai.g.alchemy.com/nft/v2/" +
+        process.env.NEXT_PUBLIC_ALCHEMY_ID +
+        "/isHolderOfCollection?wallet=" +
+        address +
+        "&contractAddress=" +
+        membershipNFTAddress,
+      options
+    );
+    console.log(response);
+    console.log(membershipNFTAddress);
+    const data = await response.json();
+    console.log(data);
+    if (data.isHolderOfCollection) {
+      setIsSubscribed(true);
     }
   };
   const subscribe = async () => {
@@ -187,12 +197,15 @@ export default function Setting() {
       alert("Flow rate is cant calculated.");
     }
 
+    console.log(await superSigner.getAddress());
+    console.log(walletaddress);
+    console.log(flowRate);
     try {
       const createFlowOperation = tokenx.createFlow({
         sender: await superSigner.getAddress(),
         receiver: walletaddress,
         flowRate: flowRate,
-        // userData?: string
+        overrides: { gasLimit: 200000000 },
       });
       console.log(createFlowOperation);
       console.log("Creating your stream...");
@@ -269,6 +282,9 @@ export default function Setting() {
       // we pass along a "secret key" to demonstrate how gating can work
       secret: "supersecretkey",
       address: address?.toString() || "",
+      contractAddress: membershipNFTAddress,
+      creatorAddress: walletaddress,
+      subscriptionPrice: subscriptionPrice,
     };
 
     // we make a request to the Next.JS API route shown above
@@ -386,14 +402,22 @@ export default function Setting() {
             <Text fontSize={"lg"} pt={4} pb={2}>
               Begin ongoing support!
             </Text>
-
             <Heading size={"lg"}>
               {`${subscriptionPrice} ${paymentToken.symbol}`} / month
             </Heading>
             <Text fontSize={"sm"}>
               ※Transferred every second using Superfluid
             </Text>
-
+            <Text fontSize={"sm"}>
+              Click
+              <a
+                href="https://docs.superfluid.finance/superfluid/developers/super-tokens/super-token-faucet"
+                target="_blank"
+              >
+                {" here "}
+              </a>
+              for fDAIx faucets in Mumbai
+            </Text>
             <Box py={4}>
               <Button colorScheme="orange" onClick={subscribe}>
                 Support
