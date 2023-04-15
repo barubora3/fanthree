@@ -189,6 +189,12 @@ export default function Setting() {
                 <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
                   Membership NFT
                 </Heading>
+                <NextLink href="/creator/nft">
+                  <Button size={"sm"} colorScheme="orange" variant={"outline"}>
+                    Create NFT?
+                  </Button>
+                </NextLink>
+
                 <FormControl mt="2%">
                   <FormLabel htmlFor="email" fontWeight={"normal"}>
                     Contract Address
