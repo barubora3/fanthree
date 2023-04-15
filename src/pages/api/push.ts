@@ -34,7 +34,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
       },
       payload: {
         title: `[New!] ${title}`,
-        body: `Upload by ${creatorName}} `,
+        body: `Upload by ${creatorName} `,
         cta: "",
         img: "",
       },

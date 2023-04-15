@@ -226,7 +226,7 @@ const MobileNav = ({ onOpen, ...rest }: MobileProps) => {
               />
             </MenuButton>
             <MenuList>
-              {notifications.map((oneNotification: any, i) => {
+              {notifications.slice(0, 4).map((oneNotification: any, i) => {
                 const {
                   cta,
                   title,

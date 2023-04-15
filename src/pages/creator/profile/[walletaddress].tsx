@@ -391,7 +391,7 @@ export default function Setting() {
               {`${subscriptionPrice} ${paymentToken.symbol}`} / month
             </Heading>
             <Text fontSize={"sm"}>
-              ※Transferred every second using SuperFluid
+              ※Transferred every second using Superfluid
             </Text>
 
             <Box py={4}>
