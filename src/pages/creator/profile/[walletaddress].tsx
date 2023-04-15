@@ -205,7 +205,7 @@ export default function Setting() {
         sender: await superSigner.getAddress(),
         receiver: walletaddress,
         flowRate: flowRate,
-        overrides: { gasLimit: 200000000 },
+        // overrides: { gasLimit: 200000000 },
       });
       console.log(createFlowOperation);
       console.log("Creating your stream...");
