@@ -1,7 +1,11 @@
 import React, { ReactNode } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import NextLink from "next/link";
+import * as PushAPI from "@pushprotocol/restapi";
+import { NotificationItem, chainNameType } from "@pushprotocol/uiweb";
+import { ITheme } from "@pushprotocol/uiweb";
 
+import { useEffect, useMemo, useState } from "react";
 import {
   IconButton,
   Avatar,
@@ -24,7 +28,10 @@ import {
   MenuDivider,
   MenuItem,
   MenuList,
+  Button,
 } from "@chakra-ui/react";
+import { useAccount } from "wagmi";
+
 import {
   FiHome,
   FiTrendingUp,
@@ -59,6 +66,7 @@ export default function SidebarWithHeader({
   children: ReactNode;
 }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
+
   return (
     <Box minH="100vh" bg={useColorModeValue("gray.100", "gray.900")}>
       <SidebarContent
@@ -105,7 +113,7 @@ const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
     >
       <Flex h="20" alignItems="center" mx="8" justifyContent="space-between">
         <Text fontSize="2xl" fontFamily="monospace" fontWeight="bold">
-          Logo
+          FanThree
         </Text>
         <CloseButton display={{ base: "flex", md: "none" }} onClick={onClose} />
       </Flex>
@@ -134,7 +142,7 @@ const NavItem = ({ icon, path, children, ...rest }: NavItemProps) => {
         role="group"
         cursor="pointer"
         _hover={{
-          bg: "cyan.400",
+          bg: "orange.400",
           color: "white",
         }}
         {...rest}
@@ -159,6 +167,24 @@ interface MobileProps extends FlexProps {
   onOpen: () => void;
 }
 const MobileNav = ({ onOpen, ...rest }: MobileProps) => {
+  const { address } = useAccount();
+  const [notificationsList, setNotificationsList] = useState([]);
+  const notifications = useMemo(() => notificationsList, [notificationsList]);
+  useEffect(() => {
+    const getNotofications = async () => {
+      const notifications = await PushAPI.user.getFeeds({
+        user: `eip155:80001:${address}`, // user address in CAIP
+        env: "staging",
+      });
+      console.log(notifications);
+      setNotificationsList(notifications);
+    };
+
+    if (address) {
+      getNotofications();
+    }
+  }, []);
+
   return (
     <Flex
       ml={{ base: 0, md: 60 }}
@@ -185,16 +211,57 @@ const MobileNav = ({ onOpen, ...rest }: MobileProps) => {
         fontFamily="monospace"
         fontWeight="bold"
       >
-        Logo
+        FanThree
       </Text>
 
       <HStack spacing={{ base: "0", md: "6" }}>
-        <IconButton
-          size="lg"
-          variant="ghost"
-          aria-label="open menu"
-          icon={<FiBell />}
-        />
+        <Box>
+          <Menu>
+            <MenuButton as={IconButton} icon={<FiBell />} variant="outline">
+              <IconButton
+                size="lg"
+                variant="ghost"
+                aria-label="open menu"
+                icon={<FiBell />}
+              />
+            </MenuButton>
+            <MenuList>
+              {notifications.map((oneNotification: any, i) => {
+                const {
+                  cta,
+                  title,
+                  message,
+                  app,
+                  icon,
+                  image,
+                  url,
+                  blockchain,
+                  notification,
+                } = oneNotification;
+
+                return (
+                  <MenuItem>
+                    <NotificationItem
+                      key={i} // any unique id
+                      notificationTitle={title}
+                      notificationBody={message}
+                      cta={cta}
+                      app={app}
+                      icon={icon}
+                      image={image}
+                      url={url}
+                      theme={"light"}
+                      chainName={blockchain}
+                      // chainName={blockchain as chainNameType} // if using Typescript
+                    />
+                  </MenuItem>
+                );
+              })}
+            </MenuList>
+          </Menu>
+
+          <Box></Box>
+        </Box>
         <Flex alignItems={"center"}>
           <Menu>
             {/* <MenuButton

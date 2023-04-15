@@ -45,6 +45,8 @@ export default function Home() {
   const [description, setDescription] = useState<string>();
   const [onlySubscriber, setOnlySubscriber] = useState<boolean>(true);
 
+  const [createrName, setCreatorName] = useState<string>();
+
   const isReady = title && description && video ? true : false;
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -128,6 +130,23 @@ export default function Home() {
   //   FieldValue.arrayUnion({ a: 1, b: 2 }})
 
   // };
+  const notice = async (creatorName: string) => {
+    const body: any = {
+      creatorName: createrName,
+      // we pass along a "secret key" to demonstrate how gating can work
+      title: title,
+      address: address?.toString() || "",
+    };
+    const response = await fetch("/api/push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    console.log(response);
+  };
   const regist = async () => {
     if (!asset) return;
     const id = asset?.[0].id;
@@ -135,6 +154,7 @@ export default function Home() {
     const createdAt = asset?.[0].createdAt;
     const playbackUrl = asset?.[0].playbackUrl;
     const playbackId = asset?.[0].playbackId;
+
     if (!address) {
       toast({
         title: "Database Update Failed.",
@@ -149,6 +169,8 @@ export default function Home() {
     // not scalable
     const docRef = doc(firestore, "creator", address.toLowerCase());
     const docSnap = await getDoc(docRef);
+    const data = docSnap.data();
+    const creatorName = data_.name;
     let contentsList = docSnap.data()?.contents;
     if (contentsList == undefined) {
       contentsList = [];
@@ -164,7 +186,7 @@ export default function Home() {
       playbackId,
     });
     await updateDoc(docRef, { contents: contentsList });
-
+    notice(creatorName);
     toast({
       title: "Upload Compleated.",
       status: "success",
@@ -181,6 +203,7 @@ export default function Home() {
         <Heading w="100%" textAlign={"center"} fontWeight="normal" mb="2%">
           Upload Video
         </Heading>
+
         <Box pt={4} px={60}>
           <Box>
             <FormControl mt="2%" py={2}>
@@ -244,6 +267,11 @@ export default function Home() {
         </Box>
 
         {/* <Button onClick={onOpen}>Trigger modal</Button> */}
+        {/* <Box>
+          <Button onClick={notice} colorScheme="blue">
+            Notice
+          </Button>
+        </Box> */}
 
         <Modal onClose={onClose} isOpen={isOpen} isCentered>
           <ModalOverlay />

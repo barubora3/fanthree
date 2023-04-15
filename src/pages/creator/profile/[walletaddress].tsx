@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { Player } from "@livepeer/react";
+import * as PushAPI from "@pushprotocol/restapi";
 
 import {
   Box,
@@ -23,7 +24,7 @@ import {
   Spacer,
   Flex,
 } from "@chakra-ui/react";
-import { firestore, doc, getDoc, setDoc } from "../../../lib/firebase";
+import { firestore, doc, getDoc, updateDoc } from "../../../lib/firebase";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/router";
 import paymentToken from "../../../config/paymentToken.json";
@@ -58,6 +59,7 @@ export default function Setting() {
 
   const [jwtToken, setJwtToken] = useState<string>("");
   const [jwtMap, setJwtMap] = useState<any>({});
+  const [isReceiveNotification, setIsRecievedNotification] = useState(false);
 
   interface ApiError {
     message: string;
@@ -95,6 +97,7 @@ export default function Setting() {
         if (isConnected && address) {
           // stateを参照だとラグがあるので引数で渡す
           checkSubscription(creator.price);
+          checkRecievedNotification();
         }
       } catch (e) {
         console.log("Error getting cached document:", e);
@@ -288,6 +291,67 @@ export default function Setting() {
     // return response.json() as Promise<CreateSignedPlaybackResponse | ApiError>;
   };
 
+  const checkRecievedNotification = async () => {
+    const docRef = doc(firestore, "creator", walletaddress.toLowerCase());
+    const docSnap = await getDoc(docRef);
+
+    let addressList = docSnap.data()?.noticeAddresses;
+    if (addressList == undefined) {
+      return;
+    }
+    if (addressList.includes(address?.toLowerCase())) {
+      setIsRecievedNotification(true);
+    }
+  };
+
+  const receiveNotification = async () => {
+    const provider = new ethers.providers.Web3Provider(
+      (window as any).ethereum
+    );
+    await provider.send("eth_requestAccounts", []);
+
+    const signer = provider.getSigner();
+
+    await PushAPI.channels.subscribe({
+      signer: signer,
+      channelAddress: `eip155:80001:0x9bFB274fd7af15127382DcA012bE1af2C0F4d713`, // channel address in CAIP
+      userAddress: `eip155:80001:${address}`, // user address in CAIP
+      onSuccess: () => {
+        console.log("opt in success");
+      },
+      onError: () => {
+        console.error("opt in error");
+      },
+      env: "staging",
+    });
+    const docRef = doc(firestore, "creator", walletaddress.toLowerCase());
+    const docSnap = await getDoc(docRef);
+
+    let addressList = docSnap.data()?.noticeAddresses;
+    console.log(addressList);
+    if (addressList == undefined) {
+      addressList = [];
+    }
+    addressList.push(address?.toLowerCase() || "");
+    await updateDoc(docRef, { noticeAddresses: addressList });
+    setIsRecievedNotification(true);
+  };
+
+  const stopNotification = async () => {
+    const docRef = doc(firestore, "creator", walletaddress.toLowerCase());
+    const docSnap = await getDoc(docRef);
+
+    let addressList = docSnap.data()?.noticeAddresses;
+    console.log(addressList);
+    console.log(addressList[0]);
+
+    console.log(typeof addressList);
+    const index = addressList.indexOf(address?.toLowerCase());
+    addressList.splice(index, 1);
+    await updateDoc(docRef, { addressList: addressList });
+    setIsRecievedNotification(false);
+  };
+
   // const { mutate: createJwt, data: createdJwt } = useMutation({
   //   mutationFn: async () => {
   //     const body: CreateSignedPlaybackBody = {
@@ -473,6 +537,25 @@ export default function Setting() {
             <Text fontSize={"2xl"}>{name}</Text>
             <Text>{description}</Text>
           </Stack>
+          <Spacer />
+          {isReceiveNotification && (
+            <Button
+              colorScheme="orange"
+              variant={"outline"}
+              onClick={stopNotification}
+            >
+              Stop Notifications
+            </Button>
+          )}
+          {!isReceiveNotification && (
+            <Button
+              colorScheme="orange"
+              variant={"outline"}
+              onClick={receiveNotification}
+            >
+              Receive Notifications
+            </Button>
+          )}
         </HStack>
         <Box pt={12}>
           {subscriptionPrice > 0 && !isSubscribed && <Subscribe />}
