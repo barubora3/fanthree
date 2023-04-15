@@ -3,7 +3,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import NextLink from "next/link";
 import * as PushAPI from "@pushprotocol/restapi";
 import { NotificationItem, chainNameType } from "@pushprotocol/uiweb";
-import { ITheme } from "@pushprotocol/uiweb";
+import { ITheme, ENV } from "@pushprotocol/uiweb";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -174,7 +174,7 @@ const MobileNav = ({ onOpen, ...rest }: MobileProps) => {
     const getNotofications = async () => {
       const notifications = await PushAPI.user.getFeeds({
         user: `eip155:80001:${address}`, // user address in CAIP
-        env: "staging",
+        env: ENV.STAGING,
       });
       console.log(notifications);
       setNotificationsList(notifications);
@@ -240,9 +240,9 @@ const MobileNav = ({ onOpen, ...rest }: MobileProps) => {
                 } = oneNotification;
 
                 return (
-                  <MenuItem>
+                  <MenuItem key={i}>
                     <NotificationItem
-                      key={i} // any unique id
+                      // key={i} // any unique id
                       notificationTitle={title}
                       notificationBody={message}
                       cta={cta}

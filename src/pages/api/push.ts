@@ -40,7 +40,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
       },
       channel: `eip155:80001:${channelAddress}`, // your channel address
       //   env: ENV.STAGING,
-      env: "staging",
+      //   env: "staging",
+      env: ENV.STAGING,
     });
     console.log(apiResponse);
   } catch (err) {

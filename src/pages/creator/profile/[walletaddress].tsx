@@ -32,6 +32,7 @@ import { Framework } from "@superfluid-finance/sdk-core";
 import { useProvider, useSwitchNetwork, useSigner, useNetwork } from "wagmi";
 import { ethers } from "ethers";
 import { useMutation } from "@tanstack/react-query";
+import { ENV } from "@pushprotocol/uiweb";
 import {
   CreateSignedPlaybackBody,
   CreateSignedPlaybackResponse,
@@ -322,7 +323,8 @@ export default function Setting() {
       onError: () => {
         console.error("opt in error");
       },
-      env: "staging",
+      // env: "staging",
+      env: ENV.STAGING,
     });
     const docRef = doc(firestore, "creator", walletaddress.toLowerCase());
     const docSnap = await getDoc(docRef);

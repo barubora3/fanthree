@@ -45,7 +45,7 @@ export default function Home() {
   const [description, setDescription] = useState<string>();
   const [onlySubscriber, setOnlySubscriber] = useState<boolean>(true);
 
-  const [createrName, setCreatorName] = useState<string>();
+  const [creatorName, setCreatorName] = useState<string>();
 
   const isReady = title && description && video ? true : false;
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -132,7 +132,7 @@ export default function Home() {
   // };
   const notice = async (creatorName: string) => {
     const body: any = {
-      creatorName: createrName,
+      creatorName: creatorName,
       // we pass along a "secret key" to demonstrate how gating can work
       title: title,
       address: address?.toString() || "",
@@ -166,11 +166,13 @@ export default function Home() {
       return;
     }
 
-    // not scalable
     const docRef = doc(firestore, "creator", address.toLowerCase());
     const docSnap = await getDoc(docRef);
-    const data = docSnap.data();
-    const creatorName = data_.name;
+    // const data = docSnap.data();
+    const creatorName = docSnap.data()?.name;
+    console.log(docSnap.data());
+    console.log(creatorName);
+
     let contentsList = docSnap.data()?.contents;
     if (contentsList == undefined) {
       contentsList = [];
