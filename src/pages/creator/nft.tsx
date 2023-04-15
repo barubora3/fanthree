@@ -99,6 +99,15 @@ export default function NFT() {
                   Deploy Your Contract (ERC1155)
                 </Heading>
 
+                <Heading w="100%" fontWeight="normal" pb={4} size="md">
+                  <a
+                    href="https://app.bunzz.dev/module-templates/d5817b20-f008-4e66-946e-3c67fd09b7a5?version=1.0.0"
+                    target="_blank"
+                  >
+                    Contract Template (jump tp Bunzz)
+                  </a>
+                </Heading>
+
                 <FormControl mt="2%">
                   <FormLabel fontWeight={"normal"}>base URI </FormLabel>
                   <Input
