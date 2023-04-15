@@ -209,7 +209,7 @@ export default function Setting() {
               </VStack>
               <Center pt={4}>
                 <Button colorScheme="orange" onClick={update}>
-                  Set
+                  Save
                 </Button>
               </Center>
             </Box>
