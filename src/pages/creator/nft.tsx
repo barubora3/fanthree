@@ -119,14 +119,14 @@ export default function NFT() {
               <Box pt={4}>
                 <Text>Contract Address</Text>
                 <a
-                  href={`https://mumbai.polygonscan.com/address/ ${contractAddress}`}
+                  href={`https://mumbai.polygonscan.com/address/${contractAddress}`}
                   target="_blank"
                 >
                   <Text>{contractAddress}</Text>
                 </a>
                 <Text>Transaction Hash</Text>
                 <a
-                  href={`https://mumbai.polygonscan.com/tx/ ${txHash}`}
+                  href={`https://mumbai.polygonscan.com/tx/${txHash}`}
                   target="_blank"
                 >
                   <Text>{txHash}</Text>
