@@ -3607,7 +3607,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/react-query@npm:^4.28.0":
+"@tanstack/react-query@npm:^4.28.0, @tanstack/react-query@npm:^4.29.1":
   version: 4.29.1
   resolution: "@tanstack/react-query@npm:4.29.1"
   dependencies:
@@ -7886,6 +7886,7 @@ __metadata:
     "@livepeer/react": "npm:^2.4.2"
     "@rainbow-me/rainbowkit": "npm:^0.12.8"
     "@superfluid-finance/sdk-core": "npm:^0.6.3"
+    "@tanstack/react-query": "npm:^4.29.1"
     "@types/eslint": "npm:^8"
     "@types/node": "npm:^18.15.11"
     "@types/react": "npm:18.0.35"

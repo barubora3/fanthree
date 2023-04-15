@@ -56,9 +56,37 @@ export default function Home() {
     error,
   } = useCreateAsset(
     video
-      ? {
-          sources: [{ name: video.name, file: video }] as const,
-        }
+      ? onlySubscriber
+        ? {
+            sources: [
+              {
+                name: video.name,
+                file: video,
+                playbackPolicy: { type: "jwt" },
+                // playbackPolicy: {
+                //   type: "webhook",
+                //   // This is the id of the webhook you created in step 2
+                // webhookId: process.env.NEXT_PUBLIC_WEBHOOK_ID || "",
+                // webhookContext: {
+                //   // This is the context you want to pass to your webhook
+                //   // It can be anything you want, and it will be passed back to your webhook
+                //   title: title,
+                //   description: description,
+                //   address: address,
+
+                // },
+                // },
+              },
+            ] as const,
+          }
+        : {
+            sources: [
+              {
+                name: video.name,
+                file: video,
+              },
+            ] as const,
+          }
       : null
   );
 
@@ -106,7 +134,7 @@ export default function Home() {
     const name = asset?.[0].name;
     const createdAt = asset?.[0].createdAt;
     const playbackUrl = asset?.[0].playbackUrl;
-
+    const playbackId = asset?.[0].playbackId;
     if (!address) {
       toast({
         title: "Database Update Failed.",
@@ -133,8 +161,9 @@ export default function Home() {
       name,
       createdAt,
       playbackUrl,
+      playbackId,
     });
-    await updateDoc(docRef, { contens: contentsList });
+    await updateDoc(docRef, { contents: contentsList });
 
     toast({
       title: "Upload Compleated.",

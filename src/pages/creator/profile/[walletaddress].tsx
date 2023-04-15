@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { Player } from "@livepeer/react";
+
 import {
   Box,
   Button,
@@ -18,6 +19,9 @@ import {
   CardHeader,
   CardBody,
   CardFooter,
+  Badge,
+  Spacer,
+  Flex,
 } from "@chakra-ui/react";
 import { firestore, doc, getDoc, setDoc } from "../../../lib/firebase";
 import { useAccount } from "wagmi";
@@ -26,7 +30,11 @@ import paymentToken from "../../../config/paymentToken.json";
 import { Framework } from "@superfluid-finance/sdk-core";
 import { useProvider, useSwitchNetwork, useSigner } from "wagmi";
 import { ethers } from "ethers";
-
+import { useMutation } from "@tanstack/react-query";
+import {
+  CreateSignedPlaybackBody,
+  CreateSignedPlaybackResponse,
+} from "../../api/sign-jwt";
 export default function Setting() {
   const router = useRouter();
   const provider = useProvider();
@@ -46,11 +54,11 @@ export default function Setting() {
 
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
   const [contentsList, setContentsList] = useState<any[]>([]);
-  useEffect(() => {
-    // if (!isConnected || !address) {
-    //   return;
-    // }
 
+  interface ApiError {
+    message: string;
+  }
+  useEffect(() => {
     const initialize = async () => {
       if (!walletaddress) {
         return;
@@ -76,33 +84,20 @@ export default function Setting() {
         setSubscriptionPrice(creator.price);
         setMembershipNFTAddress(creator.contractAddress);
 
-        // get contents
-        const contentsDoc = await getDoc(contentsRef);
+        setContentsList(creator.contents ? creator.contents : []);
 
-        const contents = contentsDoc.data();
         // console.log(contents);
       } catch (e) {
         console.log("Error getting cached document:", e);
       }
+
+      // check subscription
+      if (!isConnected || !address) {
+        checkSubscription()
+      }
     };
     initialize();
   }, [walletaddress]);
-
-  const update = async () => {
-    if (!address) return;
-    await setDoc(doc(firestore, "creator", address), {
-      price: subscriptionPrice,
-      contractAddress: membershipNFTAddress,
-    });
-
-    toast({
-      title: "Setting Updated.",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-      position: "bottom-right",
-    });
-  };
 
   function calculateFlowRate(amountInEther: number) {
     let calculatedFlowRate = "";
@@ -121,6 +116,38 @@ export default function Setting() {
     return calculatedFlowRate;
   }
 
+  const checkSubscription = async () => {
+    const chainId = paymentToken.chainId;
+    if (!chainId) {
+      alert("data id is not set.");
+      return;
+    }
+    await switchNetwork?.(chainId);
+    (window as any).reload();
+
+    const provider = new ethers.providers.Web3Provider(
+      (window as any).ethereum
+    );
+    const signer = provider.getSigner();
+ 
+
+    const sf = await Framework.create({
+      chainId: paymentToken.chainId,
+      provider,
+    });
+
+
+    const tokenx = await sf.loadSuperToken(paymentToken.symbol);
+
+    let res = await tokenx.getFlow({
+      sender: address ||"",
+      receiver: walletaddress,
+      providerOrSigner: signer
+    });
+
+    console.log(res)
+
+  }
   const subscribe = async () => {
     const chainId = paymentToken.chainId;
     if (!chainId) {
@@ -137,10 +164,6 @@ export default function Setting() {
     await provider.send("eth_requestAccounts", []);
 
     const signer = provider.getSigner();
-    console.log(signer);
-
-    // const chainId = await window.ethereum.request({ method: "eth_chainId" });
-    console.log("A");
     const sf = await Framework.create({
       chainId: paymentToken.chainId,
       provider,
@@ -148,16 +171,12 @@ export default function Setting() {
 
     const superSigner = sf.createSigner({ signer: signer });
 
-    console.log(signer);
-    console.log(await superSigner.getAddress());
     const tokenx = await sf.loadSuperToken(paymentToken.symbol);
 
-    console.log(tokenx);
     const flowRate = calculateFlowRate(subscriptionPrice);
     if (!flowRate) {
       alert("Flow rate is cant calculated.");
     }
-    console.log(flowRate);
 
     try {
       const createFlowOperation = tokenx.createFlow({
@@ -166,27 +185,96 @@ export default function Setting() {
         flowRate: flowRate,
         // userData?: string
       });
-      console.log({
-        sender: await superSigner.getAddress(),
-        receiver: walletaddress,
-        flowRate: flowRate,
-      });
       console.log(createFlowOperation);
       console.log("Creating your stream...");
 
       const result = await createFlowOperation.exec(superSigner);
       console.log(result);
-
       console.log(
         `Congrats - you've just created a money stream!
       `
       );
+      setIsSubscribed(true);
     } catch (error) {
       console.log(
         "Hmmm, your transaction threw an error. Make sure that this stream does not already exist, and that you've entered a valid Ethereum address!"
       );
       console.error(error);
     }
+
+    // 冗長だけどまとめてる時間ない
+    const unsubscribe = async () => {
+      const chainId = paymentToken.chainId;
+      if (!chainId) {
+        alert("data id is not set.");
+        return;
+      }
+      await switchNetwork?.(chainId);
+  
+      // The wagmi signature does not match the type SuperFluid is assuming.
+      // I don't have time for this, so I'll use Ethers. Waste of code. Defeat.
+      const provider = new ethers.providers.Web3Provider(
+        (window as any).ethereum
+      );
+      await provider.send("eth_requestAccounts", []);
+  
+      const signer = provider.getSigner();
+      const sf = await Framework.create({
+        chainId: paymentToken.chainId,
+        provider,
+      });
+  
+      const superSigner = sf.createSigner({ signer: signer });
+  
+      const tokenx = await sf.loadSuperToken(paymentToken.symbol);
+  
+  
+      try {
+        const deleteFlowOperation = tokenx.deleteFlow({
+          sender: await signer.getAddress(),
+          receiver: walletaddress
+          // userData?: string
+        });  
+        console.log(deleteFlowOperation);
+        console.log("Creating your stream...");
+  
+        const result = await deleteFlowOperation.exec(superSigner);
+        console.log(result);
+        console.log(
+          `Congrats - you've just created a money stream!
+        `
+        );
+        setIsSubscribed(false);
+
+      } catch (error) {
+        console.log(
+          "Hmmm, your transaction threw an error. Make sure that this stream does not already exist, and that you've entered a valid Ethereum address!"
+        );
+        console.error(error);
+      }
+
+    const { mutate: createJwt, data: createdJwt } = useMutation({
+      mutationFn: async (param: any) => {
+        const body: CreateSignedPlaybackBody = {
+          playbackId: param.playbackId,
+          // we pass along a "secret key" to demonstrate how gating can work
+          secret: "supersecretkey",
+        };
+
+        // we make a request to the Next.JS API route shown above
+        const response = await fetch("/api/create-signed-jwt", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+
+        return response.json() as Promise<
+          CreateSignedPlaybackResponse | ApiError
+        >;
+      },
+    });
   };
   return (
     <>
@@ -230,93 +318,106 @@ export default function Setting() {
               <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
                 Contents
               </Heading>
-              <FormControl mt="2%" py={2}>
-                <FormLabel fontWeight={"normal"}>Name</FormLabel>
-                <Input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </FormControl>
+              {contentsList.map((content) => {
+                return (
+                  <Box key={content.playbackId}>
+                  {!content.onlySubscriber && (
+                    <Card w={"100%"}>
+                      <CardBody>
+                        <Stack
+                          flexDirection="column"
+                          justifyContent="center"
+                          alignItems="start"
+                        >
+               
 
-              <FormControl mt="2%" py={2}>
-                <FormLabel fontWeight={"normal"}>Description</FormLabel>
-                <Input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </FormControl>
-
-              <FormControl mt="2%" py={2}>
-                <FormLabel fontWeight={"normal"}>
-                  Profile Picture(URL)
-                </FormLabel>
-
-                <Input
-                  type="text"
-                  value={pfp}
-                  onChange={(e) => setPfp(e.target.value)}
-                />
-                {pfp && (
-                  <Box pt={4}>
-                    <img
-                      width={250}
-                      height={250}
-                      src={pfp}
-                      alt="profile picture"
-                    />
-                  </Box>
-                )}
-              </FormControl>
+                          <HStack pb={4}>
+                            <Box>
+                              <Heading fontSize={"2xl"} fontFamily={"body"}>
+                                {content.name}
+                              </Heading>
+                            </Box>
+                            <Box pt={0} pl={2}>
+                              <Badge variant="solid" colorScheme="green">
+                                Public
+                              </Badge>
+                            </Box>
+                          </HStack>
+                          <Player
+                            title={content?.name}
+                            playbackId={content?.playbackId}
+                            autoPlay
+                            muted
+                            // jwt={
+                            //   (createdJwt as CreateSignedPlaybackResponse)?.token
+                            // }
+                          />
+                          <Text
+                            fontWeight={600}
+                            color={"gray.500"}
+                            size="sm"
+                            py={2}
+                          >
+                            {content.description}
+                          </Text>
+                        </Stack>
+                      </CardBody>
+                    </Card>
+                  )}
+                  {/* {content.onlySubscriber && (
+                    <Card w={"100%"}>
+                      <CardBody>
+                        <Stack
+                          flexDirection="column"
+                          justifyContent="center"
+                          alignItems="start"
+                        >
+                          <HStack pb={4}>
+                            <Box>
+                              <Heading fontSize={"2xl"} fontFamily={"body"}>
+                                {content.name}
+                              </Heading>
+                            </Box>
+                            <Box pt={0} pl={2}>
+                              <Badge variant="solid" colorScheme="blue">
+                                Only Subscriber
+                              </Badge>
+                            </Box>
+                          </HStack>
+                          <Player
+                            title={content?.name}
+                            playbackId={content?.playbackId}
+                            autoPlay
+                            muted
+                            // jwt={
+                            //   (
+                            //     createdJwt
+                          
+                            //     as CreateSignedPlaybackResponse
+                            //   )?.token
+                            // }
+                          />
+                          <Text
+                            fontWeight={600}
+                            color={"gray.500"}
+                            size="sm"
+                            py={2}
+                          >
+                            {content.description}
+                          </Text>
+                        </Stack>
+                      </CardBody>
+                    </Card>
+                  )} */}
+            
+                </Box>
+                )
+              })}
             </VStack>
-            <VStack>
-              <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
-                Subscription Fee
-              </Heading>
-              <FormControl mt="2%">
-                <FormLabel fontWeight={"normal"}>
-                  Monthly Payment (Paid in USDCx)
-                </FormLabel>
-                <HStack>
-                  <Input
-                    id="contract"
-                    type="number"
-                    w={"50%"}
-                    value={subscriptionPrice}
-                    onChange={(e) =>
-                      setSubscriptionPrice(Number(e.target.value))
-                    }
-                  />
-                  <Text pl={4}>USDCx</Text>
-                </HStack>
-              </FormControl>
-            </VStack>
-            <Box py={4} />
-            <VStack>
-              <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
-                Membership NFT
-              </Heading>
-              <FormControl mt="2%">
-                <FormLabel htmlFor="email" fontWeight={"normal"}>
-                  Contract Address
-                </FormLabel>
-                <Input
-                  id="contract"
-                  type="text"
-                  value={membershipNFTAddress}
-                  onChange={(e) => setMembershipNFTAddress(e.target.value)}
-                />
-              </FormControl>
-            </VStack>
-            <Center pt={4}>
-              <Button colorScheme="orange" onClick={update}>
-                Set
-              </Button>
-            </Center>
           </Box>
+          
         </Box>
       </Box>
     </>
   );
-}
+};
