@@ -100,9 +100,7 @@ export default function NFT() {
                 </Heading>
 
                 <FormControl mt="2%">
-                  <FormLabel htmlFor="email" fontWeight={"normal"}>
-                    base URI{" "}
-                  </FormLabel>
+                  <FormLabel fontWeight={"normal"}>base URI </FormLabel>
                   <Input
                     id="contract"
                     type="text"

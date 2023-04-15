@@ -172,7 +172,6 @@ export default function Setting() {
                   </FormLabel>
                   <HStack>
                     <Input
-                      id="contract"
                       type="number"
                       w={"50%"}
                       value={subscriptionPrice}
@@ -196,11 +195,8 @@ export default function Setting() {
                 </NextLink>
 
                 <FormControl mt="2%">
-                  <FormLabel htmlFor="email" fontWeight={"normal"}>
-                    Contract Address
-                  </FormLabel>
+                  <FormLabel fontWeight={"normal"}>Contract Address</FormLabel>
                   <Input
-                    id="contract"
                     type="text"
                     value={membershipNFTAddress}
                     onChange={(e) => setMembershipNFTAddress(e.target.value)}

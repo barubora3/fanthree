@@ -1,5 +1,7 @@
 import { useCreateAsset } from "@livepeer/react";
 import { useMemo, useState, useEffect } from "react";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+
 import {
   firestore,
   doc,
@@ -65,19 +67,6 @@ export default function Home() {
                 name: video.name,
                 file: video,
                 playbackPolicy: { type: "jwt" },
-                // playbackPolicy: {
-                //   type: "webhook",
-                //   // This is the id of the webhook you created in step 2
-                // webhookId: process.env.NEXT_PUBLIC_WEBHOOK_ID || "",
-                // webhookContext: {
-                //   // This is the context you want to pass to your webhook
-                //   // It can be anything you want, and it will be passed back to your webhook
-                //   title: title,
-                //   description: description,
-                //   address: address,
-
-                // },
-                // },
               },
             ] as const,
           }
@@ -125,11 +114,6 @@ export default function Home() {
     }
   }, [progress?.[0].phase]);
 
-  // const test = async () => {
-
-  //   FieldValue.arrayUnion({ a: 1, b: 2 }})
-
-  // };
   const notice = async (creatorName: string) => {
     const body: any = {
       creatorName: creatorName,
@@ -205,69 +189,87 @@ export default function Home() {
         <Heading w="100%" textAlign={"center"} fontWeight="normal" mb="2%">
           Upload Video
         </Heading>
-
-        <Box pt={4} px={60}>
-          <Box>
-            <FormControl mt="2%" py={2}>
-              <FormLabel fontWeight={"normal"}>Movie</FormLabel>
-              {video && (
-                <Center pb={8}>
-                  <video width="400" src={videoUrl} autoPlay loop></video>
-                </Center>
-              )}
-              <Input type="file" accept="video/mp4" onChange={onChangeFile} />
-            </FormControl>
-          </Box>
-          <Box>
-            <FormControl mt="2%" py={2}>
-              <FormLabel fontWeight={"normal"}>Title</FormLabel>
-              <Input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </FormControl>
-            <FormControl mt="2%" py={2}>
-              <FormLabel fontWeight={"normal"}>Description</FormLabel>
-              <Input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </FormControl>
-            <FormControl mt="2%" py={2}>
-              <FormLabel fontWeight={"normal"}>Visibility Setting</FormLabel>
-              <Select
-                onChange={(e) =>
-                  setOnlySubscriber(
-                    e.target.value == "Only Subscriber" ? true : false
-                  )
-                }
+        {!isConnected && (
+          <>
+            <VStack>
+              <Heading
+                w="100%"
+                textAlign={"center"}
+                fontWeight="normal"
+                mb="2%"
+                size={"md"}
+                pt={4}
               >
-                <option value="Only Subscriber" defaultChecked>
-                  Only subscriber
-                </option>
-                <option value="Anyone can see">Anyone can see</option>
-              </Select>
-            </FormControl>
+                Please Connect Your Wallet
+              </Heading>
+              <ConnectButton />
+            </VStack>
+          </>
+        )}
+
+        {isConnected && (
+          <Box pt={4} px={60}>
+            <Box>
+              <FormControl mt="2%" py={2}>
+                <FormLabel fontWeight={"normal"}>Movie</FormLabel>
+                {video && (
+                  <Center pb={8}>
+                    <video width="400" src={videoUrl} autoPlay loop></video>
+                  </Center>
+                )}
+                <Input type="file" accept="video/mp4" onChange={onChangeFile} />
+              </FormControl>
+            </Box>
+            <Box>
+              <FormControl mt="2%" py={2}>
+                <FormLabel fontWeight={"normal"}>Title</FormLabel>
+                <Input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </FormControl>
+              <FormControl mt="2%" py={2}>
+                <FormLabel fontWeight={"normal"}>Description</FormLabel>
+                <Input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </FormControl>
+              <FormControl mt="2%" py={2}>
+                <FormLabel fontWeight={"normal"}>Visibility Setting</FormLabel>
+                <Select
+                  onChange={(e) =>
+                    setOnlySubscriber(
+                      e.target.value == "Only Subscriber" ? true : false
+                    )
+                  }
+                >
+                  <option value="Only Subscriber" defaultChecked>
+                    Only subscriber
+                  </option>
+                  <option value="Anyone can see">Anyone can see</option>
+                </Select>
+              </FormControl>
+            </Box>
+
+            {/* {progressFormatted && <p>{progressFormatted}</p>} */}
+            <Center pt={4}>
+              <Button
+                colorScheme="orange"
+                onClick={() => {
+                  onOpen();
+                  createAsset?.();
+                }}
+                isDisabled={!isReady}
+                isLoading={status === "loading"}
+              >
+                Upload
+              </Button>
+            </Center>
           </Box>
-
-          {/* {progressFormatted && <p>{progressFormatted}</p>} */}
-          <Center pt={4}>
-            <Button
-              colorScheme="orange"
-              onClick={() => {
-                onOpen();
-                createAsset?.();
-              }}
-              isDisabled={!isReady}
-              isLoading={status === "loading"}
-            >
-              Upload
-            </Button>
-          </Center>
-        </Box>
-
+        )}
         {/* <Button onClick={onOpen}>Trigger modal</Button> */}
         {/* <Box>
           <Button onClick={notice} colorScheme="blue">
