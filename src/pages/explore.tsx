@@ -78,8 +78,8 @@ export default function Explore() {
           boxShadow={"2xl"}
           padding={4}
         >
-          <Flex pl={8}>
-            <Avatar objectFit="cover" boxSize="100%" src={props.pfp} />
+          <Flex pl={6}>
+            <Avatar size={"xl"} src={props.pfp} />
           </Flex>
           <Stack
             flexDirection="column"

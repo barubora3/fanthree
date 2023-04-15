@@ -5,6 +5,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 export type CreateSignedPlaybackBody = {
   playbackId: string;
   secret: string;
+  address: string;
 };
 
 export type CreateSignedPlaybackResponse = {
@@ -32,20 +33,24 @@ const handler = async (
           .json({ message: "No private/public key configured." });
       }
 
-      const { playbackId, secret }: CreateSignedPlaybackBody = req.body;
+      const { playbackId, secret, address }: CreateSignedPlaybackBody =
+        req.body;
 
-      if (!playbackId || !secret) {
-        return res.status(400).json({ message: "Missing data in body." });
-      }
+      //   if (!playbackId || !secret) {
+      //     return res.status(400).json({ message: "Missing data in body." });
+      //   }
 
       // we check that the "supersecretkey" was passed in the body
       // this could be a more complex check, like taking a signed payload,
       // getting the address for that signature, and fetching if they own an NFT
       //
       // https://docs.ethers.io/v5/single-page/#/v5/api/utils/signing-key/-%23-SigningKey--other-functions
-      if (secret !== "supersecretkey") {
-        return res.status(401).json({ message: "Incorrect secret." });
-      }
+      //   if (secret !== "supersecretkey") {
+      //     return res.status(401).json({ message: "Incorrect secret." });
+      //   }
+
+      // add custom check
+      // i want check if the address is the created Flow
 
       // we sign the JWT and return it to the user
       const token = await signAccessJwt({

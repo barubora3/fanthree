@@ -28,18 +28,19 @@ import { useAccount } from "wagmi";
 import { useRouter } from "next/router";
 import paymentToken from "../../../config/paymentToken.json";
 import { Framework } from "@superfluid-finance/sdk-core";
-import { useProvider, useSwitchNetwork, useSigner } from "wagmi";
+import { useProvider, useSwitchNetwork, useSigner, useNetwork } from "wagmi";
 import { ethers } from "ethers";
 import { useMutation } from "@tanstack/react-query";
 import {
   CreateSignedPlaybackBody,
   CreateSignedPlaybackResponse,
-} from "../../api/sign-jwt";
+} from "../../api/create-signed-jwt";
 export default function Setting() {
   const router = useRouter();
   const provider = useProvider();
   const { chains, error, pendingChainId, switchNetwork } = useSwitchNetwork();
   const { data: signer, isError, isLoading } = useSigner();
+  const { chain } = useNetwork();
 
   const walletaddress = router.query.walletaddress as string;
 
@@ -54,6 +55,9 @@ export default function Setting() {
 
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
   const [contentsList, setContentsList] = useState<any[]>([]);
+
+  const [jwtToken, setJwtToken] = useState<string>("");
+  const [jwtMap, setJwtMap] = useState<any>({});
 
   interface ApiError {
     message: string;
@@ -84,16 +88,16 @@ export default function Setting() {
         setSubscriptionPrice(creator.price);
         setMembershipNFTAddress(creator.contractAddress);
 
-        setContentsList(creator.contents ? creator.contents : []);
+        setContentsList(creator.contents.length > 0 ? creator.contents : []);
 
         // console.log(contents);
+        // check subscription
+        if (isConnected && address) {
+          // stateを参照だとラグがあるので引数で渡す
+          checkSubscription(creator.price);
+        }
       } catch (e) {
         console.log("Error getting cached document:", e);
-      }
-
-      // check subscription
-      if (!isConnected || !address) {
-        checkSubscription()
       }
     };
     initialize();
@@ -116,38 +120,39 @@ export default function Setting() {
     return calculatedFlowRate;
   }
 
-  const checkSubscription = async () => {
-    const chainId = paymentToken.chainId;
-    if (!chainId) {
-      alert("data id is not set.");
+  const checkSubscription = async (monthlyPrice: number) => {
+    if (chain?.id != paymentToken.chainId) {
+      alert("Please switch to Mumbai.");
       return;
     }
-    await switchNetwork?.(chainId);
-    (window as any).reload();
 
     const provider = new ethers.providers.Web3Provider(
       (window as any).ethereum
     );
     const signer = provider.getSigner();
- 
 
     const sf = await Framework.create({
       chainId: paymentToken.chainId,
       provider,
     });
 
-
     const tokenx = await sf.loadSuperToken(paymentToken.symbol);
 
     let res = await tokenx.getFlow({
-      sender: address ||"",
+      sender: address || "",
       receiver: walletaddress,
-      providerOrSigner: signer
+      providerOrSigner: signer,
     });
 
-    console.log(res)
+    console.log(res.flowRate);
+    console.log(calculateFlowRate(subscriptionPrice));
 
-  }
+    if (res.flowRate >= calculateFlowRate(monthlyPrice)) {
+      setIsSubscribed(true);
+    } else {
+      setIsSubscribed(false);
+    }
+  };
   const subscribe = async () => {
     const chainId = paymentToken.chainId;
     if (!chainId) {
@@ -201,223 +206,311 @@ export default function Setting() {
       );
       console.error(error);
     }
+  };
 
-    // 冗長だけどまとめてる時間ない
-    const unsubscribe = async () => {
-      const chainId = paymentToken.chainId;
-      if (!chainId) {
-        alert("data id is not set.");
-        return;
-      }
-      await switchNetwork?.(chainId);
-  
-      // The wagmi signature does not match the type SuperFluid is assuming.
-      // I don't have time for this, so I'll use Ethers. Waste of code. Defeat.
-      const provider = new ethers.providers.Web3Provider(
-        (window as any).ethereum
-      );
-      await provider.send("eth_requestAccounts", []);
-  
-      const signer = provider.getSigner();
-      const sf = await Framework.create({
-        chainId: paymentToken.chainId,
-        provider,
-      });
-  
-      const superSigner = sf.createSigner({ signer: signer });
-  
-      const tokenx = await sf.loadSuperToken(paymentToken.symbol);
-  
-  
-      try {
-        const deleteFlowOperation = tokenx.deleteFlow({
-          sender: await signer.getAddress(),
-          receiver: walletaddress
-          // userData?: string
-        });  
-        console.log(deleteFlowOperation);
-        console.log("Creating your stream...");
-  
-        const result = await deleteFlowOperation.exec(superSigner);
-        console.log(result);
-        console.log(
-          `Congrats - you've just created a money stream!
-        `
-        );
-        setIsSubscribed(false);
+  // 冗長だけどまとめてる時間ない
+  const unsubscribe = async () => {
+    const chainId = paymentToken.chainId;
+    if (!chainId) {
+      alert("data id is not set.");
+      return;
+    }
+    await switchNetwork?.(chainId);
 
-      } catch (error) {
-        console.log(
-          "Hmmm, your transaction threw an error. Make sure that this stream does not already exist, and that you've entered a valid Ethereum address!"
-        );
-        console.error(error);
-      }
+    // The wagmi signature does not match the type SuperFluid is assuming.
+    // I don't have time for this, so I'll use Ethers. Waste of code. Defeat.
+    const provider = new ethers.providers.Web3Provider(
+      (window as any).ethereum
+    );
+    await provider.send("eth_requestAccounts", []);
 
-    const { mutate: createJwt, data: createdJwt } = useMutation({
-      mutationFn: async (param: any) => {
-        const body: CreateSignedPlaybackBody = {
-          playbackId: param.playbackId,
-          // we pass along a "secret key" to demonstrate how gating can work
-          secret: "supersecretkey",
-        };
-
-        // we make a request to the Next.JS API route shown above
-        const response = await fetch("/api/create-signed-jwt", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        });
-
-        return response.json() as Promise<
-          CreateSignedPlaybackResponse | ApiError
-        >;
-      },
+    const signer = provider.getSigner();
+    const sf = await Framework.create({
+      chainId: paymentToken.chainId,
+      provider,
     });
+
+    const superSigner = sf.createSigner({ signer: signer });
+
+    const tokenx = await sf.loadSuperToken(paymentToken.symbol);
+
+    try {
+      const deleteFlowOperation = tokenx.deleteFlow({
+        sender: await signer.getAddress(),
+        receiver: walletaddress,
+        // userData?: string
+      });
+      console.log(deleteFlowOperation);
+      console.log("Creating your stream...");
+
+      const result = await deleteFlowOperation.exec(superSigner);
+      console.log(result);
+      console.log(
+        `Congrats - you've just created a money stream!
+        `
+      );
+      setIsSubscribed(false);
+    } catch (error) {
+      console.log(
+        "Hmmm, your transaction threw an error. Make sure that this stream does not already exist, and that you've entered a valid Ethereum address!"
+      );
+      console.error(error);
+    }
+  };
+
+  const setJwt = async (playbackId: string, index: number) => {
+    const body: CreateSignedPlaybackBody = {
+      // playbackId: playbackId ,
+      playbackId: playbackId,
+      // we pass along a "secret key" to demonstrate how gating can work
+      secret: "supersecretkey",
+      address: address?.toString() || "",
+    };
+
+    // we make a request to the Next.JS API route shown above
+    const response = await fetch("/api/create-signed-jwt", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const res = await response.json();
+    let newContentsList = contentsList;
+    newContentsList[index].jwt = res.token;
+    setContentsList(newContentsList);
+    setJwtToken(res.token);
+    setJwtMap((jwtMap: any) => ({ ...jwtMap, [index]: res.token }));
+    console.log(jwtMap);
+
+    console.log(newContentsList);
+    // return response.json() as Promise<CreateSignedPlaybackResponse | ApiError>;
+  };
+
+  // const { mutate: createJwt, data: createdJwt } = useMutation({
+  //   mutationFn: async () => {
+  //     const body: CreateSignedPlaybackBody = {
+  //       // playbackId: playbackId ,
+  //       playbackId: "",
+  //       // we pass along a "secret key" to demonstrate how gating can work
+  //       secret: "supersecretkey",
+  //     };
+
+  //     // we make a request to the Next.JS API route shown above
+  //     const response = await fetch("/api/create-signed-jwt", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify(body),
+  //     });
+
+  //     return response.json() as Promise<
+  //       CreateSignedPlaybackResponse | ApiError
+  //     >;
+  //   },
+  // });
+
+  const Subscribe = () => {
+    return (
+      <Card variant={"elevated"} align="center">
+        <CardBody>
+          <VStack>
+            <Text fontSize={"lg"} pt={4} pb={2}>
+              Begin ongoing support!
+            </Text>
+
+            <Heading size={"lg"}>
+              {`${subscriptionPrice} ${paymentToken.symbol}`} / month
+            </Heading>
+            <Text fontSize={"sm"}>
+              ※Transferred every second using SuperFluid
+            </Text>
+
+            <Box py={4}>
+              <Button colorScheme="orange" onClick={subscribe}>
+                Support
+              </Button>
+            </Box>
+          </VStack>
+        </CardBody>
+      </Card>
+    );
+  };
+
+  const Unsubscribe = () => {
+    return (
+      <Card variant={"elevated"} align="center">
+        <CardBody>
+          <VStack>
+            <Text fontSize={"lg"} pt={4} pb={2}>
+              Stop Support
+            </Text>
+
+            <Heading size={"lg"}>
+              {`${subscriptionPrice} ${paymentToken.symbol}`} / month
+            </Heading>
+            <Text fontSize={"sm"} textColor={"red"}>
+              ※You will not be able to see subscriber-only content.
+            </Text>
+
+            <Box py={4}>
+              <Button colorScheme="red" variant="outline" onClick={unsubscribe}>
+                Stop
+              </Button>
+            </Box>
+          </VStack>
+        </CardBody>
+      </Card>
+    );
+  };
+
+  const PublicVideo = (content: any) => {
+    return (
+      <>
+        <Card w={"100%"}>
+          <CardBody>
+            <Stack
+              flexDirection="column"
+              justifyContent="center"
+              alignItems="start"
+            >
+              <HStack pb={4}>
+                <Box>
+                  <Heading fontSize={"2xl"} fontFamily={"body"}>
+                    {content.name}
+                  </Heading>
+                </Box>
+                <Box pt={0} pl={2}>
+                  <Badge variant="solid" colorScheme="green">
+                    Public
+                  </Badge>
+                </Box>
+              </HStack>
+              <Player
+                title={content?.title}
+                playbackId={content?.playbackId}
+                // autoPlay
+                // muted
+              />
+              <Text fontWeight={600} color={"gray.500"} size="sm" py={2}>
+                {content.description}
+              </Text>
+            </Stack>
+          </CardBody>
+        </Card>
+      </>
+    );
+  };
+
+  const PrivateVideo = (content: any) => {
+    return (
+      <>
+        <Card w={"100%"}>
+          <CardBody>
+            <Stack
+              flexDirection="column"
+              justifyContent="center"
+              alignItems="start"
+            >
+              <HStack pb={4}>
+                <Box>
+                  <Heading fontSize={"2xl"} fontFamily={"body"}>
+                    {content.name}
+                  </Heading>
+                </Box>
+                <Box pt={0} pl={2}>
+                  <Badge variant="solid" colorScheme="blue">
+                    Only Subscriber
+                  </Badge>
+                </Box>
+              </HStack>
+              {isSubscribed && (
+                <>
+                  {/* {contentsList[content.index].jwt && ( */}
+
+                  {jwtMap[content.index] && (
+                    <Player
+                      title={content?.title}
+                      playbackId={content?.playbackId}
+                      // jwt={
+                      //   // (createdJwt as CreateSignedPlaybackResponse)?.token
+                      //   content.jwt
+                      // }
+
+                      jwt={jwtMap[content.index]}
+                    />
+                  )}
+                  {!jwtMap[content.index] && (
+                    <Button
+                      onClick={() => setJwt(content.playbackId, content.index)}
+                    >
+                      Check if you have the right to view
+                    </Button>
+                  )}
+                  <Box>
+                    {/* {contentsList[content.index].jwt} {content.index} */}
+                  </Box>
+                </>
+              )}
+
+              <Text fontWeight={600} color={"gray.500"} size="sm" py={2}>
+                {content.description}
+              </Text>
+            </Stack>
+          </CardBody>
+        </Card>
+      </>
+    );
   };
   return (
     <>
-      <Box px={40} pt={10}>
-        <Box suppressHydrationWarning={true}>
-          <Box pt={4} px={60}>
-            <HStack>
-              <Avatar src={pfp} size={"2xl"}></Avatar>
-              <Stack pl={4}>
-                <Text fontSize={"2xl"}>{name}</Text>
-                <Text>{description}</Text>
-              </Stack>
-            </HStack>
-            <Box pt={12}>
-              {subscriptionPrice > 0 && (
-                <Card variant={"elevated"} align="center">
-                  <CardBody>
-                    <VStack>
-                      <Text fontSize={"lg"} pt={4} pb={2}>
-                        Begin ongoing support!
-                      </Text>
-
-                      <Heading size={"lg"}>
-                        {`${subscriptionPrice} ${paymentToken.symbol}`} / month
-                      </Heading>
-                      <Text fontSize={"sm"}>
-                        ※Transferred every second using SuperFluid
-                      </Text>
-
-                      <Box py={4}>
-                        <Button colorScheme="orange" onClick={subscribe}>
-                          Support
-                        </Button>
-                      </Box>
-                    </VStack>
-                  </CardBody>
-                </Card>
-              )}
-            </Box>
-            <VStack pt={12} pb={8}>
-              <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
-                Contents
-              </Heading>
-              {contentsList.map((content) => {
+      <Box pt={4} px={60}>
+        <HStack>
+          <Avatar src={pfp} size={"2xl"}></Avatar>
+          <Stack pl={4}>
+            <Text fontSize={"2xl"}>{name}</Text>
+            <Text>{description}</Text>
+          </Stack>
+        </HStack>
+        <Box pt={12}>
+          {subscriptionPrice > 0 && !isSubscribed && <Subscribe />}
+        </Box>
+        <Box>
+          <VStack pt={12} pb={8}>
+            <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
+              Contents
+            </Heading>
+            <Box>
+              {contentsList.map((content, index) => {
                 return (
-                  <Box key={content.playbackId}>
-                  {!content.onlySubscriber && (
-                    <Card w={"100%"}>
-                      <CardBody>
-                        <Stack
-                          flexDirection="column"
-                          justifyContent="center"
-                          alignItems="start"
-                        >
-               
-
-                          <HStack pb={4}>
-                            <Box>
-                              <Heading fontSize={"2xl"} fontFamily={"body"}>
-                                {content.name}
-                              </Heading>
-                            </Box>
-                            <Box pt={0} pl={2}>
-                              <Badge variant="solid" colorScheme="green">
-                                Public
-                              </Badge>
-                            </Box>
-                          </HStack>
-                          <Player
-                            title={content?.name}
-                            playbackId={content?.playbackId}
-                            autoPlay
-                            muted
-                            // jwt={
-                            //   (createdJwt as CreateSignedPlaybackResponse)?.token
-                            // }
-                          />
-                          <Text
-                            fontWeight={600}
-                            color={"gray.500"}
-                            size="sm"
-                            py={2}
-                          >
-                            {content.description}
-                          </Text>
-                        </Stack>
-                      </CardBody>
-                    </Card>
-                  )}
-                  {/* {content.onlySubscriber && (
-                    <Card w={"100%"}>
-                      <CardBody>
-                        <Stack
-                          flexDirection="column"
-                          justifyContent="center"
-                          alignItems="start"
-                        >
-                          <HStack pb={4}>
-                            <Box>
-                              <Heading fontSize={"2xl"} fontFamily={"body"}>
-                                {content.name}
-                              </Heading>
-                            </Box>
-                            <Box pt={0} pl={2}>
-                              <Badge variant="solid" colorScheme="blue">
-                                Only Subscriber
-                              </Badge>
-                            </Box>
-                          </HStack>
-                          <Player
-                            title={content?.name}
-                            playbackId={content?.playbackId}
-                            autoPlay
-                            muted
-                            // jwt={
-                            //   (
-                            //     createdJwt
-                          
-                            //     as CreateSignedPlaybackResponse
-                            //   )?.token
-                            // }
-                          />
-                          <Text
-                            fontWeight={600}
-                            color={"gray.500"}
-                            size="sm"
-                            py={2}
-                          >
-                            {content.description}
-                          </Text>
-                        </Stack>
-                      </CardBody>
-                    </Card>
-                  )} */}
-            
-                </Box>
-                )
+                  <Box key={content.playbackId} py={4}>
+                    {!content.onlySubscriber && (
+                      <PublicVideo
+                        name={content.title}
+                        description={content.description}
+                        playbackId={content.playbackId}
+                      />
+                    )}
+                    {content.onlySubscriber && (
+                      <PrivateVideo
+                        name={content.title}
+                        description={content.description}
+                        playbackId={content.playbackId}
+                        // jwt={content.jwt}
+                        index={index}
+                      />
+                    )}
+                    {/* <Box>{jwtMap[index]}</Box> */}
+                  </Box>
+                );
               })}
-            </VStack>
-          </Box>
-          
+            </Box>
+          </VStack>
+          {subscriptionPrice > 0 && isSubscribed && <Unsubscribe />}
         </Box>
       </Box>
     </>
   );
-};
+}
