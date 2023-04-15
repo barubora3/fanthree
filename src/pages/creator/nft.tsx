@@ -96,7 +96,7 @@ export default function NFT() {
             <Box pt={4} px={20}>
               <VStack>
                 <Heading w="100%" fontWeight="normal" mb="2%" size="lg">
-                  Deploy Your Contract (ERC1155s)
+                  Deploy Your Contract (ERC1155)
                 </Heading>
 
                 <FormControl mt="2%">
